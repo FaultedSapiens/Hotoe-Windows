@@ -128,23 +128,10 @@ GetClientRect(hwnd, &bounds);
 webviewController->put_Bounds(bounds);
 
 webviewController->get_CoreWebView2(&webview);
-
-webview->NavigateToString(
-    LR"(
-<!DOCTYPE html>
-<html>
-<body style="background:#202020;color:white;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-font-family:Segoe UI;
-font-size:48px;">
-Hello Hotoe
-</body>
-</html>
-)"
+webview->Navigate(
+    L"file:///C:/Users/acer/Projects/Hotoe-Windows/prototypes/04-overlay-webview/index.html"
 );
+
 
 return S_OK;
                     }
