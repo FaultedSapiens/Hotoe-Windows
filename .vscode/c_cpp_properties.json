@@ -3,8 +3,9 @@
         {
             "name": "Win32",
             "includePath": [
-                "${workspaceFolder}/**"
-            ],
+    "${workspaceFolder}/**",
+    "${workspaceFolder}/external/webview2/include"
+],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
