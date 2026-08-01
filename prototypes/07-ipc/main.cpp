@@ -1168,16 +1168,73 @@ bool ExtractJsonNumber(
     }
 }
 
+bool ExtractJsonString(
+    const std::wstring& json,
+    const std::wstring& key,
+    std::wstring& value
+)
+{
+    const std::wstring token =
+        L"\"" + key + L"\"";
+
+    size_t position =
+        json.find(token);
+
+    if (position == std::wstring::npos)
+        return false;
+
+    position =
+        json.find(
+            L':',
+            position + token.length()
+        );
+
+    if (position == std::wstring::npos)
+        return false;
+
+    ++position;
+
+    while (
+        position < json.length() &&
+        iswspace(json[position])
+    )
+    {
+        ++position;
+    }
+
+    if (
+        position >= json.length() ||
+        json[position] != L'"'
+    )
+    {
+        return false;
+    }
+
+    ++position;
+
+    size_t end =
+        json.find(
+            L'"',
+            position
+        );
+
+    if (end == std::wstring::npos)
+        return false;
+
+    value =
+        json.substr(
+            position,
+            end - position
+        );
+
+    return true;
+}
 
 bool ParseInteractiveRegion(
     const std::wstring& json,
     CssRect& region
 )
 {
-    /*
-        First make sure this is the message class D3 understands.
-    */
-
     if (
         (json.find(L"\"type\":\"interactive-region\"") == std::wstring::npos &&
          json.find(L"\"type\":\"region-piece\"") == std::wstring::npos)
@@ -1192,29 +1249,10 @@ bool ParseInteractiveRegion(
     double bottom;
 
     if (
-        !ExtractJsonNumber(
-            json,
-            L"left",
-            left
-        ) ||
-
-        !ExtractJsonNumber(
-            json,
-            L"top",
-            top
-        ) ||
-
-        !ExtractJsonNumber(
-            json,
-            L"right",
-            right
-        ) ||
-
-        !ExtractJsonNumber(
-            json,
-            L"bottom",
-            bottom
-        )
+        !ExtractJsonNumber(json, L"left", left) ||
+        !ExtractJsonNumber(json, L"top", top) ||
+        !ExtractJsonNumber(json, L"right", right) ||
+        !ExtractJsonNumber(json, L"bottom", bottom)
     )
     {
         return false;
@@ -1238,23 +1276,22 @@ bool ParseInteractiveRegion(
         return false;
     }
 
-    region.left   = left;
-    region.top    = top;
-    region.right  = right;
+    region.left = left;
+    region.top = top;
+    region.right = right;
     region.bottom = bottom;
 
     return true;
 }
-
 
 bool ParseInteractiveRegionSnapshot(
     const std::wstring& regionJson,
     CssRect& region
 )
 {
-    double left   = 0.0;
-    double top    = 0.0;
-    double right  = 0.0;
+    double left = 0.0;
+    double top = 0.0;
+    double right = 0.0;
     double bottom = 0.0;
 
     if (
@@ -1279,12 +1316,66 @@ bool ParseInteractiveRegionSnapshot(
         return false;
     }
 
-    region.left   = left;
-    region.top    = top;
-    region.right  = right;
+    region.left = left;
+    region.top = top;
+    region.right = right;
     region.bottom = bottom;
 
     return true;
+}
+
+std::wstring Dispatch(
+    int id,
+    const std::wstring& method,
+    const std::wstring& json
+)
+{
+    if (method == L"ping")
+    {
+        return
+            L"{\"id\":"
+            + std::to_wstring(id)
+            + L",\"ok\":true,\"result\":\"pong\"}";
+    }
+
+    if (method == L"version")
+    {
+        return
+            L"{\"id\":"
+            + std::to_wstring(id)
+            + L",\"ok\":true,\"result\":\"0.1\"}";
+    }
+
+    if (method == L"echo")
+    {
+        std::wstring text;
+
+        if (
+            ExtractJsonString(
+                json,
+                L"text",
+                text
+            )
+        )
+        {
+            return
+                L"{\"id\":"
+                + std::to_wstring(id)
+                + L",\"ok\":true,\"result\":\""
+                + text
+                + L"\"}";
+        }
+
+        return
+            L"{\"id\":"
+            + std::to_wstring(id)
+            + L",\"ok\":false,\"error\":\"Missing text\"}";
+    }
+
+    return
+        L"{\"id\":"
+        + std::to_wstring(id)
+        + L",\"ok\":false,\"error\":\"Unknown method\"}";
 }
 
 HRESULT InitializeWebView()
@@ -1411,19 +1502,20 @@ HRESULT InitializeWebView()
 
                                     EventRegistrationToken webMessageToken{};
 
+
+
 hr = gWebView->add_WebMessageReceived(
+
     Callback<ICoreWebView2WebMessageReceivedEventHandler>(
-        [](
-            ICoreWebView2* sender,
-            ICoreWebView2WebMessageReceivedEventArgs* args
-        ) -> HRESULT
+
+        [](ICoreWebView2* sender,
+           ICoreWebView2WebMessageReceivedEventArgs* args)
+        -> HRESULT
         {
+
             LPWSTR rawJson = nullptr;
 
-            HRESULT hr =
-                args->get_WebMessageAsJson(&rawJson);
-
-            if (FAILED(hr) || !rawJson)
+            if (FAILED(args->get_WebMessageAsJson(&rawJson)) || !rawJson)
                 return S_OK;
 
             std::wstring json(rawJson);
@@ -1433,51 +1525,70 @@ hr = gWebView->add_WebMessageReceived(
                 << json
                 << std::endl;
 
-            //
-            // ping
-            //
-            if (json.find(L"\"type\":\"ping\"") != std::wstring::npos)
-            {
-                const wchar_t* reply =
-                    LR"({"type":"pong"})";
-
-                sender->PostWebMessageAsJson(reply);
-
-                std::wcout
-                    << L"TX --> "
-                    << reply
-                    << std::endl;
-            }
-
-            //
-            // echo
-            //
-            else if (json.find(L"\"type\":\"echo\"") != std::wstring::npos)
-            {
-                sender->PostWebMessageAsJson(rawJson);
-
-                std::wcout
-                    << L"TX --> "
-                    << rawJson
-                    << std::endl;
-            }
-
-            //
-            // unknown
-            //
-            else
-            {
-                std::wcout
-                    << L"Unknown transport message"
-                    << std::endl;
-            }
-
             CoTaskMemFree(rawJson);
 
+            /* -----------------------------
+               Parse request id
+            ----------------------------- */
+
+            double idNumber = 0;
+
+            if (!ExtractJsonNumber(
+                    json,
+                    L"id",
+                    idNumber))
+                return S_OK;
+
+            int id =
+                static_cast<int>(idNumber);
+
+            /* -----------------------------
+               Extract method
+            ----------------------------- */
+
+            std::wstring method;
+
+if (
+    !ExtractJsonString(
+        json,
+        L"method",
+        method
+    )
+)
+{
+    return S_OK;
+}
+
+            std::wstring reply =
+
+    Dispatch(
+
+        id,
+
+        method,
+
+        json
+
+    );
+
+sender->PostWebMessageAsJson(
+
+    reply.c_str()
+
+);
+            std::wcout
+                << L"TX --> "
+                << reply
+                << std::endl;
+
             return S_OK;
+
         }
+
     ).Get(),
+
     &webMessageToken
+
 );
                                     // ------------------------
                                     // Transparent WebView
