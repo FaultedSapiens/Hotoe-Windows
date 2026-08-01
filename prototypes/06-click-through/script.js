@@ -27,6 +27,54 @@ const focusChanges = document.getElementById("focus-changes");
 
 const eventLog = document.getElementById("event-log");
 
+// P6 hit-test inspector
+const insideRegion = document.getElementById("inside-region");
+const expectedHitTest = document.getElementById("expected-hit-test");
+const regionPointer = document.getElementById("region-pointer");
+
+
+// Native interactive RECT:
+//
+// left   = 100
+// top    = 100
+// right  = 500
+// bottom = 350
+
+const TEST_REGION = {
+    left: 100,
+    top: 100,
+    right: 500,
+    bottom: 350
+};
+
+
+function isInsideTestRegion(x, y)
+{
+    return (
+        x >= TEST_REGION.left &&
+        x < TEST_REGION.right &&
+        y >= TEST_REGION.top &&
+        y < TEST_REGION.bottom
+    );
+}
+
+
+function updateHitTestInspector(x, y)
+{
+    const inside = isInsideTestRegion(x, y);
+
+    insideRegion.textContent = inside ? "true" : "false";
+
+    expectedHitTest.textContent =
+        inside ? "HTCLIENT" : "HTTRANSPARENT";
+
+    regionPointer.textContent =
+        inside ? "captured" : "pass-through";
+}
+
+
+// Initial state
+
 nativeState.textContent = "Waiting for native data...";
 webviewState.textContent = "Ready";
 
@@ -54,12 +102,21 @@ keyDowns.textContent = "0";
 activates.textContent = "0";
 focusChanges.textContent = "0";
 
+insideRegion.textContent = "false";
+expectedHitTest.textContent = "HTTRANSPARENT";
+regionPointer.textContent = "waiting";
+
+
+// Event log placeholders
+
 eventLog.innerHTML = "";
 
 for (let i = 0; i < 8; i++)
 {
     const line = document.createElement("div");
+
     line.className = "event";
     line.textContent = "Waiting for Win32...";
+
     eventLog.appendChild(line);
 }
