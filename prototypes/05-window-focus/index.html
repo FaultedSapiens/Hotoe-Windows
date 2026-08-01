@@ -1,0 +1,155 @@
+<header class="topbar">
+    <h1>Hotoe Win32 Inspector</h1>
+
+    <div class="status">
+        Prototype 05
+    </div>
+</header>
+
+<main class="dashboard">
+
+    <section class="card" id="native-card">
+        <h2>Native Bridge</h2>
+
+        <div id="native-state">
+            Waiting for native data...
+        </div>
+    </section>
+
+    <section class="card" id="window-card">
+        <h2>Window</h2>
+
+        <div id="window-state">
+
+            <div>Focused:
+                <span id="focused">false</span>
+            </div>
+
+            <div>Active:
+                <span id="active">false</span>
+            </div>
+
+            <div>Foreground:
+                <span id="foreground">false</span>
+            </div>
+
+            <div>Minimized:
+                <span id="minimized">false</span>
+            </div>
+
+            <div>Maximized:
+                <span id="maximized">false</span>
+            </div>
+
+            <div>Size:
+                <span id="size">0 × 0</span>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="card" id="mouse-card">
+        <h2>Mouse</h2>
+
+        <div id="mouse-state">
+
+            <div>Position:
+                <span id="mouse-position">0, 0</span>
+            </div>
+
+            <div>Inside:
+                <span id="mouse-inside">false</span>
+            </div>
+
+            <div>Left:
+                <span id="mouse-left">false</span>
+            </div>
+
+            <div>Middle:
+                <span id="mouse-middle">false</span>
+            </div>
+
+            <div>Right:
+                <span id="mouse-right">false</span>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="card" id="keyboard-card">
+        <h2>Keyboard</h2>
+
+        <div id="keyboard-state">
+
+            <div>Last Key:
+                <span id="last-key">0</span>
+            </div>
+
+            <div>Ctrl:
+                <span id="ctrl">false</span>
+            </div>
+
+            <div>Shift:
+                <span id="shift">false</span>
+            </div>
+
+            <div>Alt:
+                <span id="alt">false</span>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="card" id="webview-card">
+        <h2>WebView</h2>
+
+        <div id="webview-state">
+            Ready
+        </div>
+    </section>
+
+    <section class="card" id="stats-card">
+        <h2>Statistics</h2>
+
+        <div id="stats-state">
+
+            <div>Mouse Moves:
+                <span id="mouse-moves">0</span>
+            </div>
+
+            <div>Clicks:
+                <span id="clicks">0</span>
+            </div>
+
+            <div>Key Downs:
+                <span id="key-downs">0</span>
+            </div>
+
+            <div>Activations:
+                <span id="activates">0</span>
+            </div>
+
+            <div>Focus Changes:
+                <span id="focus-changes">0</span>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="card log-card">
+
+        <h2>Event Log</h2>
+
+        <div id="event-log">
+
+            <div class="event">
+                Waiting for events...
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+<script src="script.js"></script>

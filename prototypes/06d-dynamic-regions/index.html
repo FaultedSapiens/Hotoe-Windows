@@ -1,0 +1,354 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hotoe P6 — F2 Dynamic Interaction Topology</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: transparent;
+        font-family: Consolas, "Courier New", monospace;
+    }
+
+    /* ---------------------------------------------------------
+       Test regions
+       --------------------------------------------------------- */
+
+    .sir {
+        position: absolute;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        width: 220px;
+        height: 100px;
+
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+
+        background: rgba(255, 45, 45, 0.18);
+        border: 2px solid rgba(255, 70, 70, 0.95);
+
+        user-select: none;
+    }
+
+    .label {
+        pointer-events: none;
+    }
+
+    /* top-left: ordinary rectangle */
+    #s0 {
+        left: 80px;
+        top: 80px;
+    }
+
+    /* top-right: clipping test */
+    
+
+    #s1{
+    left:480px;
+    top:80px;
+}
+
+    /* bottom-left: transformed element */
+    #s2{
+    left:80px;
+    top:300px;
+}
+
+    /* bottom-right: ordinary rectangle */
+    #s3 {
+        left: 480px;
+        top: 300px;
+    }
+
+    /* ---------------------------------------------------------
+       Debug overlay
+       --------------------------------------------------------- */
+
+    #debug {
+        position: absolute;
+        left: 20px;
+        bottom: 20px;
+
+        padding: 10px 12px;
+
+        color: rgba(255,255,255,.8);
+        background: rgba(0,0,0,.72);
+        border: 1px solid rgba(255,255,255,.15);
+
+        font-size: 12px;
+        line-height: 1.55;
+
+        pointer-events: none;
+        user-select: none;
+    }
+</style>
+</head>
+
+<body>
+
+    <!--
+        F1 intentionally tests simple browser → native region reporting.
+
+        S0 : normal rectangle
+        S1 : clipped rectangle
+        S2 : transformed element (AABB only for F1)
+        S3 : normal rectangle
+    -->
+
+    <div id="s0" class="sir">
+        <span class="label">S0 · STATIC</span>
+    </div>
+
+    <div id="s1" class="sir">
+    <span class="label">S1 · STATIC</span>
+</div>
+
+    <div id="s2" class="sir">
+        <span class="label">S2 · ROTATED</span>
+    </div>
+
+    <div id="s3" class="sir">
+        <span class="label">S3 · STATIC</span>
+    </div>
+
+    <div id="debug">
+        HOTOE P6 · F2<br>
+        S0 — static region<br>
+        S1 — clipped region<br>
+        S2 — transformed AABB<br>
+        S3 — static region
+    </div>
+
+
+<script>
+"use strict";
+
+/* ============================================================
+   WebView bridge
+   ============================================================ */
+
+function post(message) {
+    window.chrome?.webview?.postMessage(message);
+}
+
+/* ============================================================
+   Geometry
+   ============================================================ */
+
+function rectOf(el) {
+    const r = el.getBoundingClientRect();
+
+    return {
+        left: r.left,
+        top: r.top,
+        right: r.right,
+        bottom: r.bottom
+    };
+}
+
+function collectRegions() {
+
+    const regions = [];
+
+    document.querySelectorAll(".sir").forEach(el => {
+
+        if (el.style.display === "none")
+            return;
+
+        const r = rectOf(el);
+
+        regions.push({
+            id: el.id,
+            rect: r
+        });
+
+    });
+
+    return regions;
+}
+
+/* ============================================================
+   Synchronization
+   ============================================================ */
+
+let generation = 0;
+
+function sync(reason) {
+
+    generation++;
+
+    post({
+
+        type: "regions",
+
+        stage: "F2",
+
+        generation,
+
+        reason,
+
+        regions: collectRegions()
+
+    });
+
+    console.log(
+        "F2 generation",
+        generation,
+        reason
+    );
+
+}
+
+/* ============================================================
+   Experiment
+   ============================================================ */
+
+function move(el,x,y){
+
+    el.style.left=x+"px";
+    el.style.top=y+"px";
+
+}
+
+requestAnimationFrame(()=>{
+
+    sync("generation-1");
+
+    /* -------------------------------------- */
+    setTimeout(()=>{
+
+        move(
+            document.getElementById("s1"),
+            180,
+            180
+        );
+
+        sync("generation-2-move-s1");
+
+    },2000);
+
+    /* -------------------------------------- */
+
+    setTimeout(()=>{
+
+        document
+            .getElementById("s2")
+            .remove();
+
+        sync("generation-3-remove-s2");
+
+    },4000);
+
+    /* -------------------------------------- */
+
+    setTimeout(()=>{
+
+        const s4=document.createElement("div");
+
+        s4.id="s4";
+        s4.className="sir";
+
+        s4.style.left="620px";
+        s4.style.top="320px";
+
+        s4.innerHTML="<span class='label'>S4 · NEW</span>";
+
+        document.body.appendChild(s4);
+
+        sync("generation-4-add-s4");
+
+    },6000);
+
+    /* -------------------------------------- */
+
+    setTimeout(()=>{
+
+        move(
+            document.getElementById("s0"),
+            320,
+            60
+        );
+
+        move(
+            document.getElementById("s1"),
+            120,
+            340
+        );
+
+        move(
+            document.getElementById("s3"),
+            520,
+            160
+        );
+
+        move(
+            document.getElementById("s4"),
+            700,
+            360
+        );
+
+        sync("generation-5-move-all");
+
+    },8000);
+
+    /* -------------------------------------- */
+
+    setTimeout(()=>{
+
+        document
+            .querySelectorAll(".sir")
+            .forEach(e=>e.remove());
+
+        sync("generation-6-empty");
+
+    },10000);
+
+    /* -------------------------------------- */
+
+    setTimeout(()=>{
+
+        for(let i=0;i<3;i++){
+
+            const d=document.createElement("div");
+
+            d.className="sir";
+
+            d.id="n"+i;
+
+            d.style.left=(80+i*250)+"px";
+            d.style.top=(120+i*120)+"px";
+
+            d.innerHTML=
+                "<span class='label'>N"+
+                i+
+                "</span>";
+
+            document.body.appendChild(d);
+
+        }
+
+        sync("generation-7-new-topology");
+
+    },12000);
+
+});
+</script>
+
+</body>
+</html>
+```

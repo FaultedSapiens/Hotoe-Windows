@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hotoe P7A JSON Transport</title>
+
+<style>
+html,
+body{
+    margin:0;
+    width:100%;
+    height:100%;
+    background:#202020;
+    color:white;
+    font-family:Consolas, monospace;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+button{
+    margin:8px;
+    padding:12px 20px;
+    font-size:16px;
+}
+
+#log{
+    position:fixed;
+    left:20px;
+    bottom:20px;
+
+    width:700px;
+    max-height:350px;
+
+    overflow:auto;
+
+    background:#111;
+    border:1px solid #444;
+
+    padding:12px;
+
+    white-space:pre-wrap;
+}
+</style>
+</head>
+
+<body>
+
+<div>
+
+<button onclick="sendPing()">
+Ping
+</button>
+
+<button onclick="sendEcho()">
+Echo
+</button>
+
+<button onclick="sendUnknown()">
+Unknown
+</button>
+
+<button onclick="location.reload()">
+Reload
+</button>
+
+</div>
+
+<pre id="log"></pre>
+
+<script>
+
+"use strict";
+
+const logBox =
+    document.getElementById("log");
+
+function log(...args){
+
+    console.log(...args);
+
+    logBox.textContent +=
+        args.join(" ") + "\n";
+
+}
+
+function send(msg){
+
+    log(
+        "TX -->",
+        JSON.stringify(msg)
+    );
+
+    chrome.webview.postMessage(msg);
+
+}
+
+chrome.webview.addEventListener(
+
+    "message",
+
+    event=>{
+
+        log(
+            "RX <--",
+            JSON.stringify(event.data)
+        );
+
+    }
+
+);
+
+function sendPing(){
+
+    send({
+
+        type:"ping"
+
+    });
+
+}
+
+function sendEcho(){
+
+    send({
+
+        type:"echo",
+
+        text:
+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+    });
+
+}
+
+function sendUnknown(){
+
+    send({
+
+        type:"unknown"
+
+    });
+
+}
+
+/* ------------------------------------------
+   automatic transport test
+------------------------------------------ */
+
+window.addEventListener(
+
+    "DOMContentLoaded",
+
+    ()=>{
+
+        sendPing();
+
+        setTimeout(
+            sendPing,
+            500
+        );
+
+        setTimeout(
+            sendPing,
+            1000
+        );
+
+        setTimeout(
+            sendEcho,
+            1500
+        );
+
+        setTimeout(
+            sendUnknown,
+            2000
+        );
+
+    }
+
+);
+
+</script>
+
+</body>
+</html>

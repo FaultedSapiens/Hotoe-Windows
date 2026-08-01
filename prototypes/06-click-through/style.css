@@ -1,0 +1,306 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    min-height: 100vh;
+    background: transparent;
+}
+
+body {
+    color: #ffffff;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    padding: 24px;
+}
+
+
+/* -------------------------------------------------------
+   Top bar
+------------------------------------------------------- */
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 24px;
+}
+
+.topbar h1 {
+    font-size: 24px;
+}
+
+.topbar p {
+    margin-top: 6px;
+
+    color: #9d9d9d;
+    font-size: 13px;
+}
+
+.status {
+    background: #0e639c;
+    color: white;
+
+    padding: 8px 16px;
+
+    border-radius: 8px;
+
+    font-weight: bold;
+}
+
+
+/* -------------------------------------------------------
+   P6 native interactive region
+
+   MUST match:
+
+   RECT {
+       left:   100,
+       top:    100,
+       right:  500,
+       bottom: 350
+   }
+
+   width  = 400
+   height = 250
+------------------------------------------------------- */
+
+.interactive-test {
+    position: fixed;
+
+    left: 100px;
+    top: 100px;
+
+    width: 400px;
+    height: 250px;
+
+    z-index: 10;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    gap: 12px;
+
+    padding: 24px;
+
+    border: 2px solid #f14c4c;
+    border-radius: 12px;
+
+    background: rgba(241, 76, 76, 0.12);
+
+    text-align: center;
+}
+
+.interactive-test strong {
+    color: #f14c4c;
+
+    font-size: 20px;
+}
+
+.interactive-test p {
+    max-width: 320px;
+
+    color: #d4d4d4;
+
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.interactive-label {
+    position: absolute;
+
+    top: 10px;
+    left: 12px;
+
+    color: #f14c4c;
+
+    font-size: 11px;
+    font-weight: bold;
+
+    letter-spacing: 1px;
+}
+
+.interaction-state {
+    display: flex;
+
+    gap: 8px;
+
+    margin-top: 4px;
+
+    padding: 7px 10px;
+
+    background: #252526;
+
+    border-radius: 6px;
+
+    font-size: 12px;
+}
+
+.interaction-state span {
+    color: #858585;
+}
+
+.interaction-state strong {
+    color: #4ec9b0;
+
+    font-size: 12px;
+}
+
+
+/* -------------------------------------------------------
+   Inspector
+
+   Leave the upper-left test region unobstructed.
+------------------------------------------------------- */
+
+.dashboard {
+    position: absolute;
+
+    top: 100px;
+    left: 560px;
+    right: 24px;
+
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+
+    gap: 16px;
+}
+
+.card {
+    min-height: 0;
+
+    padding: 16px;
+
+    background: #252526;
+
+    border: 1px solid #3c3c3c;
+    border-radius: 12px;
+}
+
+.card h2 {
+    margin-bottom: 18px;
+
+    color: #4fc1ff;
+
+    font-size: 18px;
+}
+
+
+/* -------------------------------------------------------
+   State rows
+------------------------------------------------------- */
+
+#window-state,
+#mouse-state,
+#keyboard-state,
+#hit-test-state,
+#stats-state {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+#window-state div,
+#mouse-state div,
+#keyboard-state div,
+#hit-test-state div,
+#stats-state div {
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 4px 0;
+
+    border-bottom: 1px solid #333;
+}
+
+#window-state span,
+#mouse-state span,
+#keyboard-state span,
+#hit-test-state span,
+#stats-state span {
+    color: #4ec9b0;
+
+    font-weight: bold;
+}
+
+#native-state,
+#webview-state {
+    margin-top: 8px;
+
+    color: #dcdcaa;
+}
+
+
+/* -------------------------------------------------------
+   Pass-through indicator
+------------------------------------------------------- */
+
+
+/* -------------------------------------------------------
+   Event log
+------------------------------------------------------- */
+
+.log-card {
+    grid-column: 1 / -1;
+}
+
+#event-log {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+
+    max-height: 240px;
+
+    margin-top: 10px;
+    padding-right: 6px;
+
+    overflow-y: auto;
+}
+
+.event {
+    padding: 8px 10px;
+
+    background: #2d2d30;
+
+    border-left: 4px solid #0e639c;
+    border-radius: 6px;
+
+    color: #d4d4d4;
+
+    font-size: 14px;
+}
+
+
+/* -------------------------------------------------------
+   Scrollbar
+------------------------------------------------------- */
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #252526;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #555;
+
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}

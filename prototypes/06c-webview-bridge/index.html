@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+}
+
+#sir {
+    position: absolute;
+
+    left: 100px;
+    top: 100px;
+
+    width: 400px;
+    height: 250px;
+
+    background: rgba(180, 20, 20, 0.92);
+
+    border: 3px solid white;
+    border-radius: 16px;
+
+    color: white;
+
+    font-family: Consolas, monospace;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 20px;
+}
+
+button {
+    padding: 14px 30px;
+
+    font-family: inherit;
+    font-size: 18px;
+
+    cursor: pointer;
+}
+
+#counter {
+    font-size: 22px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="sir">
+
+    <h2>HOTOE P6C</h2>
+
+    <button id="button">
+        CLICK ME
+    </button>
+
+    <div id="counter">
+        Clicks: 0
+    </div>
+
+</div>
+
+<script>
+let count = 0;
+
+const button =
+    document.getElementById("button");
+
+const counter =
+    document.getElementById("counter");
+
+button.addEventListener("click", () => {
+
+    count++;
+
+    counter.textContent =
+        `Clicks: ${count}`;
+
+    button.textContent =
+        "WEBVIEW RECEIVED CLICK";
+});
+</script>
+
+</body>
+</html>

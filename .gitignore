@@ -1,2 +1,23 @@
-*.exe
+# Visual Studio
+.vs/
 *.obj
+*.pdb
+*.ilk
+*.idb
+
+# Build output
+build/
+
+# Generated executables
+*.exe
+
+# Runtime data
+*.WebView2/
+
+# Temp
+*.log
+*.tmp
+
+# Windows
+Thumbs.db
+Desktop.ini
