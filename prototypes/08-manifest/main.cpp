@@ -1241,6 +1241,55 @@ bool ExtractJsonString(
     return true;
 }
 
+bool ExtractJsonBool(
+    const std::wstring& json,
+    const std::wstring& key,
+    bool& value
+)
+{
+    const std::wstring token =
+        L"\"" + key + L"\"";
+
+    size_t position =
+        json.find(token);
+
+    if (position == std::wstring::npos)
+        return false;
+
+    position =
+        json.find(
+            L':',
+            position + token.length()
+        );
+
+    if (position == std::wstring::npos)
+        return false;
+
+    ++position;
+
+    while (
+        position < json.length() &&
+        iswspace(json[position])
+    )
+    {
+        ++position;
+    }
+
+    if (json.compare(position, 4, L"true") == 0)
+    {
+        value = true;
+        return true;
+    }
+
+    if (json.compare(position, 5, L"false") == 0)
+    {
+        value = false;
+        return true;
+    }
+
+    return false;
+}
+
 std::wstring ReadTextFile(
     const wchar_t* path
 )
@@ -1279,9 +1328,17 @@ bool LoadManifest(
 manifest.entry.clear();
 manifest.debug = false;
 
-manifest.debug =
-    json.find(L"\"debug\":true")
-    != std::wstring::npos;
+if (
+    !ExtractJsonBool(
+        json,
+        L"debug",
+        manifest.debug
+    )
+)
+{
+    Log("Manifest missing debug.");
+    return false;
+}
 
 if (!ExtractJsonString(json, L"id", manifest.id))
 {
@@ -1289,9 +1346,38 @@ if (!ExtractJsonString(json, L"id", manifest.id))
     return false;
 }
 
-if (!ExtractJsonString(json, L"entry", manifest.entry))
+if (
+    !ExtractJsonString(
+        json,
+        L"entry",
+        manifest.entry
+    )
+)
 {
-    Log("Manifest missing entry.");
+    Log("Manifest error: Missing \"entry\".");
+    return false;
+}
+
+std::wstring entryPath =
+    L"prototypes/08-manifest/" +
+    manifest.entry;
+
+DWORD attributes =
+    GetFileAttributesW(
+        entryPath.c_str()
+    );
+
+if (
+    attributes == INVALID_FILE_ATTRIBUTES ||
+    (attributes & FILE_ATTRIBUTE_DIRECTORY)
+)
+{
+    std::wcout
+        << L"Manifest error:\n"
+        << L"Entry file not found:\n"
+        << entryPath
+        << std::endl;
+
     return false;
 }
 
@@ -1453,7 +1539,21 @@ if (!LoadManifest(gManifest))
 {
     return E_FAIL;
 }
-Log("Manifest loaded.");
+std::wcout
+    << L"\n========== Hotoe ==========\n"
+    << L"Application : "
+    << gManifest.id
+    << L"\n"
+
+    << L"Debug       : "
+    << (gManifest.debug ? L"true" : L"false")
+    << L"\n"
+
+    << L"Entry       : "
+    << gManifest.entry
+    << L"\n"
+
+    << L"===========================\n";
 
     return
         CreateCoreWebView2EnvironmentWithOptions(
@@ -1567,7 +1667,24 @@ Log("Manifest loaded.");
                                             ->get_CoreWebView2(
                                                 &gWebView
                                             );
+                                        
+                                            ComPtr<ICoreWebView2Settings> settings;
 
+                                    hr =
+                                        gWebView->get_Settings(
+                                            &settings
+                                        );
+
+                                    if (FAILED(hr))
+                                        return hr;
+
+                                    hr =
+                                        settings->put_AreDevToolsEnabled(
+                                            gManifest.debug
+                                        );
+
+                                    if (FAILED(hr))
+                                        return hr;
 
                                     if (FAILED(hr))
                                         return hr;
@@ -1880,25 +1997,8 @@ Log(
     if (!CreateInputWindow(instance))
         return 1;
 
-        BOOL ok = RegisterHotKey(
-    nullptr,
-    1,
-    0,
-    VK_F7
-);
+        
 
-std::cout
-    << "RegisterHotKey = "
-    << ok
-    << std::endl;
-
-if (!ok)
-{
-    std::cout
-        << "GetLastError = "
-        << GetLastError()
-        << std::endl;
-}
 
 
     HRESULT hr =
@@ -1914,6 +2014,29 @@ if (!ok)
         return 1;
     }
 
+if (gManifest.debug)
+{
+    BOOL ok =
+        RegisterHotKey(
+            nullptr,
+            1,
+            0,
+            VK_F7
+        );
+
+    std::cout
+        << "RegisterHotKey = "
+        << ok
+        << std::endl;
+
+    if (!ok)
+    {
+        std::cout
+            << "GetLastError = "
+            << GetLastError()
+            << std::endl;
+    }
+}
 
    Log(
     "P8A initialization requested"
@@ -1951,7 +2074,13 @@ while (true)
     );
 }
 
-UnregisterHotKey(nullptr, 1);
+if (gManifest.debug)
+{
+    UnregisterHotKey(
+        nullptr,
+        1
+    );
+}
 
 CoUninitialize();
 
