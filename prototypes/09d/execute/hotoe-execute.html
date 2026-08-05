@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<title>Fluent-X Field Notes</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<main id="paper" SIR>
+    <section class="hero">
+        <p class="kicker">Prototype 09D</p>
+        <h1>Fluent-X as a visible runtime</h1>
+        <p class="lede">
+            Press a method. Watch JavaScript become JSON RPC, cross the dispatcher,
+            touch a native capability, and resolve back into a Promise.
+        </p>
+    </section>
+
+    <section class="runtime-panel" aria-label="Fluent-X runtime graph">
+        <svg id="runtimeGraph" viewBox="0 0 1120 420" role="img">
+            <defs>
+                <filter id="softGlow">
+                    <feGaussianBlur stdDeviation="3" result="blur"/>
+                    <feMerge>
+                        <feMergeNode in="blur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                    <path d="M0,0 L8,4 L0,8 Z"></path>
+                </marker>
+            </defs>
+
+            <g id="edges"></g>
+            <g id="particles"></g>
+            <g id="nodes"></g>
+        </svg>
+    </section>
+
+    <section class="controls" aria-label="Runtime playground">
+        <button SIR data-action="ping">fx.ping()</button>
+        <button SIR data-action="version">fx.version()</button>
+        <button SIR data-action="sirs">SIRs()</button>
+        <button SIR data-action="push">push("Hello")</button>
+        <button SIR data-action="close">CLOSE()</button>
+    </section>
+
+    <section class="two-column">
+        <article class="inspector">
+            <header>
+                <p class="kicker">Live RPC Inspector</p>
+                <h2>Every packet leaves a trace</h2>
+            </header>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Method</th>
+                            <th>Params</th>
+                            <th>Capability</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Response</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rpcRows"></tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="explorer">
+            <header>
+                <p class="kicker">Capability Explorer</p>
+                <h2 id="capabilityName">fx.ping</h2>
+            </header>
+            <div id="capabilityList" class="capability-list"></div>
+            <ol id="capabilitySteps" class="steps"></ol>
+        </article>
+    </section>
+
+    <section class="event-stream">
+        <p class="kicker">Native Events</p>
+        <div class="event-grid">
+            <div>
+                <span>focusEvent</span>
+                <strong id="focusState">false</strong>
+            </div>
+            <div>
+                <span>busMessage</span>
+                <strong id="busState">waiting</strong>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script src="../../../runtime/js/fx.js"></script>
+<script src="app.js"></script>
+</body>
+
+</html>

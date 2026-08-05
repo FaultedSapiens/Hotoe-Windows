@@ -1,0 +1,5 @@
+{
+    "id": "com.application.demo",
+    "debug": false,
+    "entry": "execute/hotoe-execute.html"
+}

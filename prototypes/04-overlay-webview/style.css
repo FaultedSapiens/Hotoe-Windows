@@ -1,0 +1,29 @@
+body {
+
+    background: #202124;
+
+    color: white;
+
+    font-family: Segoe UI;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    height: 100vh;
+
+    margin: 0;
+
+}
+
+button {
+
+    padding: 12px 24px;
+
+    font-size: 18px;
+
+}

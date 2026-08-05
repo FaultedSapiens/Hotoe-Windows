@@ -1,0 +1,54 @@
+@echo off
+
+setlocal
+
+call "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
+
+set PROTOTYPE=09d
+
+if not exist build\%PROTOTYPE% (
+    mkdir build\%PROTOTYPE%
+)
+
+cl ^
+/EHsc ^
+/std:c++17 ^
+/DUNICODE ^
+/D_UNICODE ^
+prototypes\%PROTOTYPE%\main.cpp ^
+runtime\response.cpp ^
+runtime\request.cpp ^
+runtime\dispatcher.cpp ^
+runtime\capabilities\capabilities.cpp ^
+runtime\capabilities\ping.cpp ^
+runtime\capabilities\version.cpp ^
+runtime\capabilities\close.cpp ^
+runtime\capabilities\sirs.cpp ^
+runtime\capabilities\ipc.cpp ^
+runtime\ipc\bus.cpp ^
+/I external\webview2\include ^
+/link ^
+/LIBPATH:external\webview2\x64 ^
+WebView2LoaderStatic.lib ^
+dcomp.lib ^
+user32.lib ^
+gdi32.lib ^
+ole32.lib ^
+shell32.lib ^
+windowscodecs.lib ^
+advapi32.lib ^
+wevtapi.lib ^
+/OUT:build\%PROTOTYPE%\prototype.exe
+
+if errorlevel 1 (
+    echo.
+    echo ===== BUILD FAILED =====
+    exit /b 1
+)
+
+echo.
+echo ===== BUILD SUCCESS =====
+echo.
+echo Launching...
+
+start "" build\%PROTOTYPE%\prototype.exe

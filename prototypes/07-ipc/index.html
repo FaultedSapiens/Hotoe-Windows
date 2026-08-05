@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Hotoe P7B RPC Monitor</title>
+
+<style>
+
+*{
+
+    box-sizing:border-box;
+
+}
+
+html,
+body{
+
+    margin:0;
+
+    width:100%;
+    height:100%;
+
+    background:#0c1117;
+
+    color:white;
+
+    font-family:
+
+        "JetBrains Mono",
+        "Cascadia Mono",
+        Consolas,
+        monospace;
+
+}
+
+#app{
+
+    width:100%;
+    height:100%;
+
+    display:grid;
+
+    grid-template-rows:
+
+        72px
+        120px
+        90px
+        120px
+        1fr;
+
+    gap:22px;
+
+    padding:28px;
+
+    background-image:
+
+        linear-gradient(
+
+            rgba(255,255,255,.035) 1px,
+
+            transparent 1px
+
+        ),
+
+        linear-gradient(
+
+            90deg,
+
+            rgba(255,255,255,.035) 1px,
+
+            transparent 1px
+
+        );
+
+    background-size:
+
+        32px 32px;
+
+}
+
+header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+}
+
+#title{
+
+    font-size:32px;
+
+    font-weight:700;
+
+    letter-spacing:2px;
+
+}
+
+#title span{
+
+    color:#69b8ff;
+
+}
+
+#status{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:12px;
+
+    font-size:15px;
+
+}
+
+.dot{
+
+    width:12px;
+    height:12px;
+
+    border-radius:50%;
+
+    background:#48ff93;
+
+    box-shadow:
+
+        0 0 18px #48ff93;
+
+}
+
+#pipeline{
+
+    display:grid;
+
+    grid-template-columns:
+
+        220px
+        1fr
+        220px
+        1fr
+        220px;
+
+    gap:18px;
+
+    align-items:center;
+
+}
+
+.node{
+
+    height:82px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:#121b24;
+
+    border:1px solid #314253;
+
+    border-radius:12px;
+
+    font-size:20px;
+
+    transition:.2s;
+
+}
+
+.node.active{
+
+    border-color:#69b8ff;
+
+    box-shadow:
+
+        0 0 18px rgba(105,184,255,.45);
+
+}
+
+.bus{
+
+    position:relative;
+
+    height:4px;
+
+    background:#334655;
+
+    border-radius:20px;
+
+    overflow:hidden;
+
+}
+
+.packet{
+
+    position:absolute;
+
+    left:-16px;
+    top:-5px;
+
+    width:14px;
+    height:14px;
+
+    border-radius:50%;
+
+    background:#66d7ff;
+
+    box-shadow:
+
+        0 0 20px #66d7ff;
+
+}
+
+#controls{
+
+    display:flex;
+
+    justify-content:center;
+
+    gap:20px;
+
+}
+
+button{
+
+    width:170px;
+
+    height:52px;
+
+    background:#213343;
+
+    color:white;
+
+    border:none;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    font-size:15px;
+
+    transition:.18s;
+
+}
+
+button:hover{
+
+    background:#30495d;
+
+    transform:translateY(-2px);
+
+}
+
+#stats{
+
+    display:grid;
+
+    grid-template-columns:
+
+        repeat(4,1fr);
+
+    gap:20px;
+
+}
+
+.card{
+
+    background:#111923;
+
+    border:1px solid #324454;
+
+    border-radius:12px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+.card label{
+
+    color:#8096ad;
+
+    margin-bottom:8px;
+
+}
+
+.card span{
+
+    font-size:34px;
+
+    font-weight:700;
+
+}
+
+#console{
+
+    overflow:auto;
+
+    background:#10161d;
+
+    border:1px solid #324454;
+
+    border-radius:12px;
+
+}
+
+#rpcTable{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    font-size:13px;
+
+}
+
+thead{
+
+    position:sticky;
+
+    top:0;
+
+    background:#17212b;
+
+}
+
+th{
+
+    text-align:left;
+
+    padding:14px;
+
+    color:#8aa5bf;
+
+    border-bottom:1px solid #324454;
+
+}
+
+td{
+
+    padding:12px 14px;
+
+    border-bottom:1px solid rgba(255,255,255,.05);
+
+}
+
+tbody tr:hover{
+
+    background:#18222d;
+
+}
+
+.tx{
+
+    color:#5db7ff;
+
+}
+
+.rx{
+
+    color:#57ff8f;
+
+}
+
+.err{
+
+    color:#ff6d6d;
+
+}
+
+#log{
+
+    margin:0;
+
+    width:100%;
+    height:100%;
+
+    overflow:auto;
+
+    padding:18px;
+
+    white-space:pre-wrap;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="app">
+
+<header>
+
+<div id="title">
+
+HOTOE
+
+<span>
+
+RPC MONITOR
+
+</span>
+
+</div>
+
+<div id="status">
+
+<div class="dot"></div>
+
+CONNECTED
+
+</div>
+
+</header>
+
+<section id="pipeline">
+
+<div
+class="node"
+id="browserNode">
+
+Browser
+
+</div>
+
+<div class="bus">
+
+<div
+class="packet"
+id="packet1">
+
+</div>
+
+</div>
+
+<div
+class="node"
+id="nativeNode">
+
+Native
+
+</div>
+
+<div class="bus">
+
+<div
+class="packet"
+id="packet2">
+
+</div>
+
+</div>
+
+<div
+class="node"
+id="dispatcherNode">
+
+Dispatcher
+
+</div>
+
+</section>
+
+<section id="controls">
+
+<button onclick="sendPing()">
+
+Ping
+
+</button>
+
+<button onclick="sendEcho()">
+
+Echo
+
+</button>
+
+<button onclick="sendUnknown()">
+
+Unknown
+
+</button>
+
+<button onclick="location.reload()">
+
+Reload
+
+</button>
+
+</section>
+
+<section id="stats">
+
+<div class="card">
+
+<label>
+
+Requests
+
+</label>
+
+<span id="reqCount">
+
+0
+
+</span>
+
+</div>
+
+<div class="card">
+
+<label>
+
+Responses
+
+</label>
+
+<span id="resCount">
+
+0
+
+</span>
+
+</div>
+
+<div class="card">
+
+<label>
+
+Pending
+
+</label>
+
+<span id="pendingCount">
+
+0
+
+</span>
+
+</div>
+
+<div class="card">
+
+<label>
+
+Errors
+
+</label>
+
+<span id="errCount">
+
+0
+
+</span>
+
+</div>
+
+</section>
+
+<section id="console">
+
+<table id="rpcTable">
+
+<thead>
+
+<tr>
+
+<th>ID</th>
+<th>Direction</th>
+<th>Method</th>
+<th>Status</th>
+
+</tr>
+
+</thead>
+
+<tbody id="rpcBody">
+
+</tbody>
+
+</table>
+
+</section>
+
+</div>
+
+<script>
+    "use strict";
+
+const logBox =
+    document.getElementById("log");
+
+const reqCount =
+    document.getElementById("reqCount");
+
+const resCount =
+    document.getElementById("resCount");
+
+const pendingCount =
+    document.getElementById("pendingCount");
+
+const errCount =
+    document.getElementById("errCount");
+
+let requests = 0;
+let responses = 0;
+let pending = 0;
+let errors = 0;
+
+function updateStats(){
+
+    reqCount.textContent =
+        requests;
+
+    resCount.textContent =
+        responses;
+
+    pendingCount.textContent =
+        pending;
+
+    errCount.textContent =
+        errors;
+
+}
+
+const rpcBody =
+    document.getElementById("rpcBody");
+
+function addRow(
+
+    direction,
+
+    message
+
+){
+
+    const row =
+        document.createElement("tr");
+
+    row.innerHTML =
+
+        `
+        <td>${message.id ?? "-"}</td>
+        <td class="${direction==="TX"?"tx":"rx"}">
+            ${direction}
+        </td>
+        <td>${message.method ?? "-"}</td>
+        <td class="${message.ok===false?"err":""}">
+            ${
+                message.ok===false
+                ? "ERROR"
+                : "OK"
+            }
+        </td>
+        `;
+
+    rpcBody.appendChild(
+        row
+    );
+
+    rpcBody.parentElement.scrollTop =
+        rpcBody.parentElement.scrollHeight;
+
+}
+
+async function animatePipeline(){
+
+    const browser =
+        document.getElementById("browserNode");
+
+    const native =
+        document.getElementById("nativeNode");
+
+    const dispatcher =
+        document.getElementById("dispatcherNode");
+
+    const packet1 =
+        document.getElementById("packet1");
+
+    const packet2 =
+        document.getElementById("packet2");
+
+    browser.classList.add("active");
+
+    packet1.animate(
+
+        [
+
+            {
+
+                transform:
+                    "translateX(0)"
+
+            },
+
+            {
+
+                transform:
+                    "translateX(calc(100vw/5 - 40px))"
+
+            }
+
+        ],
+
+        {
+
+            duration:180,
+
+            easing:"linear"
+
+        }
+
+    );
+
+    await new Promise(
+
+        r=>setTimeout(r,180)
+
+    );
+
+    browser.classList.remove(
+        "active"
+    );
+
+    native.classList.add(
+        "active"
+    );
+
+    packet2.animate(
+
+        [
+
+            {
+
+                transform:
+                    "translateX(0)"
+
+            },
+
+            {
+
+                transform:
+                    "translateX(calc(100vw/5 - 40px))"
+
+            }
+
+        ],
+
+        {
+
+            duration:180,
+
+            easing:"linear"
+
+        }
+
+    );
+
+    await new Promise(
+
+        r=>setTimeout(r,180)
+
+    );
+
+    native.classList.remove(
+        "active"
+    );
+
+    dispatcher.classList.add(
+        "active"
+    );
+
+    await new Promise(
+
+        r=>setTimeout(r,120)
+
+    );
+
+    dispatcher.classList.remove(
+        "active"
+
+    );
+
+}
+
+let nextId = 1;
+function send(message){
+
+    requests++;
+
+    pending++;
+
+    updateStats();
+
+    message.id =
+        nextId++;
+
+    addRow(
+        "TX",
+        message
+    );
+
+    chrome.webview.postMessage(message);
+
+}
+
+chrome.webview.addEventListener(
+
+    "message",
+
+    event=>{
+
+        responses++;
+
+        pending--;
+
+        updateStats();
+
+        addRow(
+
+            "RX",
+
+            event.data
+
+        );
+
+        if(
+
+            event.data &&
+            event.data.ok === false
+
+        ){
+
+            errors++;
+
+            updateStats();
+
+        }
+
+    }
+
+);
+
+function sendPing(){
+
+    send({
+
+    id:1,
+
+    method:"ping",
+
+    params:{}
+
+});
+
+}
+
+function sendEcho(){
+
+    send({
+
+    id:2,
+
+    method:"echo",
+
+    params:{
+
+        text:"FallenBrainLiquidEyes"
+
+    }
+
+});
+
+}
+
+function sendUnknown(){
+
+    send({
+
+    id:3,
+
+    method:"unknown",
+
+    params:{}
+
+});
+
+}
+
+window.addEventListener(
+
+    "DOMContentLoaded",
+
+    ()=>{
+
+        updateStats();
+
+        sendPing();
+
+        setTimeout(
+
+            sendPing,
+
+            500
+
+        );
+
+        setTimeout(
+
+            sendPing,
+
+            1000
+
+        );
+
+        setTimeout(
+
+            sendEcho,
+
+            1500
+
+        );
+
+        setTimeout(
+
+            sendUnknown,
+
+            2000
+
+        );
+
+    }
+
+);
+</script>
+
+</body>
+
+</html>
