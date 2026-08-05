@@ -1,14 +1,13 @@
 #include "capabilities.h"
 
-#include "ping.h"
-#include "version.h"
-#include "close.h"
-
 const Capability gCapabilities[] =
 {
-    { L"fx.ping",    Ping    },
-    { L"fx.version", Version },
-    { L"fx.close",   Close   }
+    { L"fx.ping",                      Ping                     },
+    { L"fx.version",                   Version                  },
+    { L"fx.close",                     Close                    },
+
+    { L"fx.closeApplication",          Close                    },
+    { L"fx.recalculateInputRegions",   RecalculateInputRegions  }
 };
 
 const size_t gCapabilityCount =

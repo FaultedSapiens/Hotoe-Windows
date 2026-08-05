@@ -1,382 +1,163 @@
-  "use strict";
+"use strict";
 
-const logBox =
-    document.getElementById("log");
+const transport =
+    window.chrome && window.chrome.webview
+        ? window.chrome.webview
+        : null;
 
-const reqCount =
-    document.getElementById("reqCount");
+let nextRequestId = 1;
 
-const resCount =
-    document.getElementById("resCount");
+const pendingRequests =
+    new Map();
 
-const pendingCount =
-    document.getElementById("pendingCount");
-
-const errCount =
-    document.getElementById("errCount");
-
-let requests = 0;
-let responses = 0;
-let pending = 0;
-let errors = 0;
-
-function updateStats(){
-
-    reqCount.textContent =
-        requests;
-
-    resCount.textContent =
-        responses;
-
-    pendingCount.textContent =
-        pending;
-
-    errCount.textContent =
-        errors;
-
+function normalizeInputRegionSugar()
+{
+    document
+        .querySelectorAll("[SIR]")
+        .forEach((node) => {
+            node.classList.add(
+                "hotoe-input-region-regulator-box"
+            );
+        });
 }
 
-const rpcBody =
-    document.getElementById("rpcBody");
+function receive(
+    event
+)
+{
+    let message =
+        event.data || {};
 
-function addRow(
-
-    direction,
-
-    message
-
-){
-
-    const row =
-        document.createElement("tr");
-
-    row.innerHTML =
-
-        `
-        <td>${message.id ?? "-"}</td>
-        <td class="${direction==="TX"?"tx":"rx"}">
-            ${direction}
-        </td>
-        <td>${message.method ?? "-"}</td>
-        <td class="${message.ok===false?"err":""}">
-            ${
-                message.ok===false
-                ? "ERROR"
-                : "OK"
-            }
-        </td>
-        `;
-
-    rpcBody.appendChild(
-        row
-    );
-
-    rpcBody.parentElement.scrollTop =
-        rpcBody.parentElement.scrollHeight;
-
-}
-
-async function animatePipeline(){
-
-    const browser =
-        document.getElementById("browserNode");
-
-    const native =
-        document.getElementById("nativeNode");
-
-    const dispatcher =
-        document.getElementById("dispatcherNode");
-
-    const packet1 =
-        document.getElementById("packet1");
-
-    const packet2 =
-        document.getElementById("packet2");
-
-    browser.classList.add("active");
-
-    packet1.animate(
-
-        [
-
-            {
-
-                transform:
-                    "translateX(0)"
-
-            },
-
-            {
-
-                transform:
-                    "translateX(calc(100vw/5 - 40px))"
-
-            }
-
-        ],
-
+    if (typeof message === "string")
+    {
+        try
         {
-
-            duration:180,
-
-            easing:"linear"
-
+            message =
+                JSON.parse(message);
         }
-
-    );
-
-    await new Promise(
-
-        r=>setTimeout(r,180)
-
-    );
-
-    browser.classList.remove(
-        "active"
-    );
-
-    native.classList.add(
-        "active"
-    );
-
-    packet2.animate(
-
-        [
-
-            {
-
-                transform:
-                    "translateX(0)"
-
-            },
-
-            {
-
-                transform:
-                    "translateX(calc(100vw/5 - 40px))"
-
-            }
-
-        ],
-
+        catch
         {
-
-            duration:180,
-
-            easing:"linear"
-
+            message = {};
         }
+    }
 
+    const pending =
+        pendingRequests.get(
+            message.id
+        );
+
+    if (!pending)
+        return;
+
+    pendingRequests.delete(
+        message.id
     );
 
-    await new Promise(
+    if (message.ok === false)
+    {
+        pending.reject(
+            message.error
+        );
 
-        r=>setTimeout(r,180)
+        return;
+    }
 
+    pending.resolve(
+        message.result
     );
-
-    native.classList.remove(
-        "active"
-    );
-
-    dispatcher.classList.add(
-        "active"
-    );
-
-    await new Promise(
-
-        r=>setTimeout(r,120)
-
-    );
-
-    dispatcher.classList.remove(
-        "active"
-
-    );
-
 }
 
-let nextId = 1;
-function send(message){
-
-    requests++;
-
-    pending++;
-
-    updateStats();
-
-    message.id =
-        nextId++;
-
-    addRow(
-        "TX",
-        message
+if (transport)
+{
+    transport.addEventListener(
+        "message",
+        receive
     );
-
-    chrome.webview.postMessage(message);
-
 }
+
 function invoke(
     method,
     params = {}
 )
 {
-    send({
-
-        method,
-
-        params
-
-    });
-}
-
-chrome.webview.addEventListener(
-
-    "message",
-
-    event=>{
-
-        responses++;
-
-        pending--;
-
-        updateStats();
-
-        addRow(
-
-            "RX",
-
-            event.data
-
+    if (!transport)
+    {
+        return Promise.reject(
+            new Error("Fluent-X native transport is unavailable")
         );
-
-        if(
-
-            event.data &&
-            event.data.ok === false
-
-        ){
-
-            errors++;
-
-            updateStats();
-
-        }
-
     }
 
-);
+    const id =
+        nextRequestId++;
 
-function sendPing()
-{
-    fx.ping();
+    const request =
+        {
+            id,
+            method,
+            params
+        };
+
+    const promise =
+        new Promise((resolve, reject) => {
+            pendingRequests.set(
+                id,
+                {
+                    resolve,
+                    reject
+                }
+            );
+        });
+
+    transport.postMessage(request);
+
+    return promise;
 }
 
-function sendEcho(){
+window.fx =
+    window.fx || {};
 
-    send({
-
-    id:2,
-
-    method:"echo",
-
-    params:{
-
-        text:"FallenBrainLiquidEyes"
-
-    }
-
-});
-
-}
-
-function sendUnknown(){
-
-    send({
-
-    id:3,
-
-    method:"unknown",
-
-    params:{}
-
-});
-
-}
-
-window.addEventListener(
-
-    "DOMContentLoaded",
-
-    ()=>{
-
-        updateStats();
-
-        sendPing();
-
-        setTimeout(
-
-            sendPing,
-
-            500
-
-        );
-
-        setTimeout(
-
-            sendPing,
-
-            1000
-
-        );
-
-        setTimeout(
-
-            sendEcho,
-
-            1500
-
-        );
-
-        setTimeout(
-
-            sendUnknown,
-
-            2000
-
-        );
-
-    }
-
-);
-
-window.fx = {};
+fx.invoke = invoke;
 
 fx.ping = function ()
 {
-    invoke(
+    return invoke(
         "fx.ping"
     );
 };
 
 fx.version = function ()
 {
-    send({
-
-        method: "fx.version",
-
-        params: {}
-
-    });
+    return invoke(
+        "fx.version"
+    );
 };
 
-fx.close = function ()
+fx.closeApplication = function ()
 {
-    send({
+    return invoke(
+        "fx.closeApplication"
+    );
+};
 
-        method: "fx.close",
+fx.close = fx.closeApplication;
 
-        params: {}
+fx.recalculateInputRegions = function ()
+{
+    normalizeInputRegionSugar();
 
-    });
+    return invoke(
+        "fx.recalculateInputRegions"
+    );
+};
+
+window.invoke = invoke;
+
+window.CLOSE = function ()
+{
+    return fx.closeApplication();
+};
+
+window.SIRs = function ()
+{
+    return fx.recalculateInputRegions();
 };

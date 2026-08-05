@@ -1,23 +1,21 @@
-#include "../runtime.h"
-#include "../request.h"
-#include "../response.h"
+#include "sirs.h"
 
-RuntimeResponse Close(
+RuntimeResponse RecalculateInputRegions(
     Runtime& runtime,
     const RuntimeRequest& request
 )
 {
     if (
         runtime.host &&
-        runtime.host->closeApplication &&
-        runtime.host->closeApplication(runtime)
+        runtime.host->recalculateInputRegions &&
+        runtime.host->recalculateInputRegions(runtime)
     )
     {
         return
         {
             request.id,
             true,
-            L"",
+            L"requested",
             L""
         };
     }
@@ -27,6 +25,6 @@ RuntimeResponse Close(
         request.id,
         false,
         L"",
-        L"Application close is unavailable"
+        L"Input-region recalculation is unavailable"
     };
 }

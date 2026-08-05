@@ -12,10 +12,8 @@
 #include <iostream>
 #include <string>
 #include <vector>          // std::vector
-#include <unordered_map>
 #include <algorithm>
 #include <cmath>           // floor, ceil, isfinite
-#include <iomanip>
 
 using namespace Microsoft::WRL;
 
@@ -33,11 +31,13 @@ constexpr wchar_t VISUAL_CLASS[] =
 constexpr wchar_t INPUT_CLASS[] =
     L"HotoeP7AInput";
 
-constexpr int SIR_X = 100;
-constexpr int SIR_Y = 100;
-constexpr int SIR_W = 400;
-constexpr int SIR_H = 250;
+#ifndef HOTOE_PROTOTYPE_NAME
+#define HOTOE_PROTOTYPE_NAME "Hotoe Prototype 08A"
+#endif
 
+#ifndef HOTOE_PROTOTYPE_DIR
+#define HOTOE_PROTOTYPE_DIR L"prototypes/08-manifest"
+#endif
 
 // ============================================================
 // HWNDs / P6F1 dynamic native topology
@@ -53,9 +53,11 @@ struct Manifest
 
 Manifest gManifest;
 Runtime gRuntime;
+RuntimeHost gRuntimeHost;
 
 HWND gVisualWindow = nullptr;
 HINSTANCE gInstance = nullptr;
+long long gSirGeneration = 0;
 
 struct InputPiece
 {
@@ -123,6 +125,7 @@ void HideAllInputPieces()
 
         piece.sirId = -1;
         piece.pieceId = -1;
+        piece.trackingMouse = false;
     }
 }
 
@@ -145,34 +148,6 @@ struct NativeRect
     LONG right;
     LONG bottom;
 };
-
-
-// ============================================================
-// D4.2 native monotonic clock
-// ============================================================
-//
-// QueryPerformanceCounter defines the native timing domain.
-// Browser performance.now() is deliberately treated as a
-// separate clock domain; D4.2 records both but does not perform
-// an invalid cross-domain subtraction.
-//
-double NativeNowMs()
-{
-    static LARGE_INTEGER frequency = []()
-    {
-        LARGE_INTEGER f{};
-        QueryPerformanceFrequency(&f);
-        return f;
-    }();
-
-    LARGE_INTEGER counter{};
-    QueryPerformanceCounter(&counter);
-
-    return
-        1000.0 *
-        static_cast<double>(counter.QuadPart) /
-        static_cast<double>(frequency.QuadPart);
-}
 
 
 /*
@@ -340,6 +315,23 @@ ComPtr<ICoreWebView2Controller>
 
 ComPtr<ICoreWebView2>
     gWebView;
+
+bool DispatchRuntimeFocusEvent(
+    bool focused
+);
+
+bool HostCloseApplication(
+    Runtime& runtime
+);
+
+bool HostRecalculateInputRegions(
+    Runtime& runtime
+);
+
+bool HostDispatchFocusEvent(
+    Runtime& runtime,
+    bool focused
+);
 
 
 // ============================================================
@@ -623,6 +615,7 @@ LRESULT CALLBACK InputProc(
         if (TrackMouseEvent(&tme))
         {
             gInputPieces[inputIndex].trackingMouse = true;
+            DispatchRuntimeFocusEvent(true);
             Log("TRACE  p(t) entered S_native   :: membership 0 -> 1");
         }
         else
@@ -646,6 +639,7 @@ case WM_MOUSELEAVE:
 {
     if (inputIndex >= 0) gInputPieces[inputIndex].trackingMouse = false;
 
+    DispatchRuntimeFocusEvent(false);
     Log("TRACE  p(t) left S_native      :: membership 1 -> 0");
 
     return 0;
@@ -1317,7 +1311,7 @@ bool LoadManifest(
 
     std::wstring json =
         ReadTextFile(
-            L"prototypes/08-manifest/manifest.json"
+            HOTOE_PROTOTYPE_DIR L"/manifest.json"
         );
 
         
@@ -1363,7 +1357,8 @@ if (
 }
 
 std::wstring entryPath =
-    L"prototypes/08-manifest/" +
+    std::wstring(HOTOE_PROTOTYPE_DIR) +
+    L"/" +
     manifest.entry;
 
 DWORD attributes =
@@ -1386,60 +1381,6 @@ if (
 }
 
 return true;
-}
-
-bool ParseInteractiveRegion(
-    const std::wstring& json,
-    CssRect& region
-)
-{
-    if (
-        (json.find(L"\"type\":\"interactive-region\"") == std::wstring::npos &&
-         json.find(L"\"type\":\"region-piece\"") == std::wstring::npos)
-    )
-    {
-        return false;
-    }
-
-    double left;
-    double top;
-    double right;
-    double bottom;
-
-    if (
-        !ExtractJsonNumber(json, L"left", left) ||
-        !ExtractJsonNumber(json, L"top", top) ||
-        !ExtractJsonNumber(json, L"right", right) ||
-        !ExtractJsonNumber(json, L"bottom", bottom)
-    )
-    {
-        return false;
-    }
-
-    if (
-        !std::isfinite(left) ||
-        !std::isfinite(top) ||
-        !std::isfinite(right) ||
-        !std::isfinite(bottom)
-    )
-    {
-        return false;
-    }
-
-    if (
-        right <= left ||
-        bottom <= top
-    )
-    {
-        return false;
-    }
-
-    region.left = left;
-    region.top = top;
-    region.right = right;
-    region.bottom = bottom;
-
-    return true;
 }
 
 bool ParseInteractiveRegionSnapshot(
@@ -1482,6 +1423,233 @@ bool ParseInteractiveRegionSnapshot(
     return true;
 }
 
+std::wstring FileUrlFromPath(
+    const std::wstring& path
+)
+{
+    wchar_t fullPath[MAX_PATH]{};
+
+    DWORD length =
+        GetFullPathNameW(
+            path.c_str(),
+            MAX_PATH,
+            fullPath,
+            nullptr
+        );
+
+    if (length == 0 || length >= MAX_PATH)
+        return L"";
+
+    std::wstring url =
+        L"file:///" + std::wstring(fullPath);
+
+    std::replace(
+        url.begin(),
+        url.end(),
+        L'\\',
+        L'/'
+    );
+
+    return url;
+}
+
+void ApplyInputRegionSnapshot(
+    const std::wstring& snapshotJson
+)
+{
+    HideAllInputPieces();
+
+    int slot = 0;
+    size_t cursor = 0;
+    const long long generation =
+        ++gSirGeneration;
+
+    while (cursor < snapshotJson.length())
+    {
+        size_t begin =
+            snapshotJson.find(
+                L'{',
+                cursor
+            );
+
+        if (begin == std::wstring::npos)
+            break;
+
+        size_t end =
+            snapshotJson.find(
+                L'}',
+                begin
+            );
+
+        if (end == std::wstring::npos)
+            break;
+
+        const std::wstring objectJson =
+            snapshotJson.substr(
+                begin,
+                end - begin + 1
+            );
+
+        CssRect css{};
+
+        if (ParseInteractiveRegionSnapshot(objectJson, css))
+        {
+            double sirId = 0.0;
+            double pieceId = 0.0;
+
+            ExtractJsonNumber(
+                objectJson,
+                L"sirId",
+                sirId
+            );
+
+            ExtractJsonNumber(
+                objectJson,
+                L"pieceId",
+                pieceId
+            );
+
+            ApplyNativeInputPiece(
+                slot,
+                static_cast<int>(sirId),
+                static_cast<int>(pieceId),
+                generation,
+                CssToNativeRect(css),
+                true
+            );
+
+            ++slot;
+        }
+
+        cursor =
+            end + 1;
+    }
+
+    std::cout
+        << "SIR snapshot applied: "
+        << slot
+        << " native pieces"
+        << std::endl;
+}
+
+bool HostCloseApplication(
+    Runtime&
+)
+{
+    PostQuitMessage(0);
+    return true;
+}
+
+bool HostRecalculateInputRegions(
+    Runtime&
+)
+{
+    if (!gWebView)
+        return false;
+
+    static const wchar_t script[] =
+        LR"JS(
+(() => {
+    const nodes = Array.from(
+        document.querySelectorAll("[SIR], .hotoe-input-region-regulator-box")
+    );
+
+    return nodes.flatMap((node, sirId) => {
+        node.classList.add("hotoe-input-region-regulator-box");
+
+        return Array.from(node.getClientRects())
+            .map((rect, pieceId) => ({
+                type: "region-piece",
+                sirId,
+                pieceId,
+                left: rect.left,
+                top: rect.top,
+                right: rect.right,
+                bottom: rect.bottom
+            }))
+            .filter((rect) =>
+                Number.isFinite(rect.left) &&
+                Number.isFinite(rect.top) &&
+                Number.isFinite(rect.right) &&
+                Number.isFinite(rect.bottom) &&
+                rect.right > rect.left &&
+                rect.bottom > rect.top
+            );
+    });
+})()
+)JS";
+
+    HRESULT hr =
+        gWebView->ExecuteScript(
+            script,
+            Callback<ICoreWebView2ExecuteScriptCompletedHandler>(
+                [](
+                    HRESULT errorCode,
+                    LPCWSTR resultObjectAsJson
+                ) -> HRESULT
+                {
+                    if (FAILED(errorCode) || !resultObjectAsJson)
+                    {
+                        LogHR(
+                            "SIR ExecuteScript",
+                            errorCode
+                        );
+
+                        return S_OK;
+                    }
+
+                    ApplyInputRegionSnapshot(
+                        resultObjectAsJson
+                    );
+
+                    return S_OK;
+                }
+            ).Get()
+        );
+
+    return SUCCEEDED(hr);
+}
+
+bool HostDispatchFocusEvent(
+    Runtime&,
+    bool focused
+)
+{
+    if (!gWebView)
+        return false;
+
+    const std::wstring script =
+        L"window.dispatchEvent(new CustomEvent(\"focusEvent\", { detail: " +
+        std::wstring(focused ? L"true" : L"false") +
+        L" }));";
+
+    HRESULT hr =
+        gWebView->ExecuteScript(
+            script.c_str(),
+            nullptr
+        );
+
+    return SUCCEEDED(hr);
+}
+
+bool DispatchRuntimeFocusEvent(
+    bool focused
+)
+{
+    if (
+        !gRuntime.host ||
+        !gRuntime.host->dispatchFocusEvent
+    )
+    {
+        return false;
+    }
+
+    return gRuntime.host->dispatchFocusEvent(
+        gRuntime,
+        focused
+    );
+}
+
 
 HRESULT InitializeWebView()
 {
@@ -1493,6 +1661,7 @@ HRESULT InitializeWebView()
     }
 
     gRuntime.manifest = &gManifest;
+    gRuntime.host = &gRuntimeHost;
 
     std::wcout
         << L"\n========== Hotoe ==========\n"
@@ -1832,11 +2001,18 @@ sender->PostWebMessageAsJson(
                                     // ------------------------
 
                                     
-    const std::wstring base =
-    L"file:///C:/Users/acer/Projects/Hotoe-Windows/prototypes/08-manifest/";
-
 const std::wstring url =
-    base + gManifest.entry;
+    FileUrlFromPath(
+        std::wstring(HOTOE_PROTOTYPE_DIR) +
+        L"/" +
+        gManifest.entry
+    );
+
+if (url.empty())
+{
+    Log("Navigation URL build failed");
+    return E_FAIL;
+}
 
 hr =
     gWebView->Navigate(
@@ -1898,7 +2074,7 @@ int WINAPI WinMain(
     );
 
     Log(
-    "Hotoe Prototype 08A"
+    HOTOE_PROTOTYPE_NAME
 );
 
 Log(
@@ -1951,7 +2127,14 @@ Log(
     if (!CreateInputWindow(instance))
         return 1;
 
-        
+    gRuntimeHost.closeApplication =
+        HostCloseApplication;
+
+    gRuntimeHost.recalculateInputRegions =
+        HostRecalculateInputRegions;
+
+    gRuntimeHost.dispatchFocusEvent =
+        HostDispatchFocusEvent;
 
 
 
