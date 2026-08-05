@@ -16,7 +16,13 @@ cl ^
 /DUNICODE ^
 /D_UNICODE ^
 prototypes\%PROTOTYPE%\main.cpp ^
-/I external\webview2\include ^
+runtime\response.cpp ^
+runtime\dispatcher.cpp ^
+runtime\capabilities\capabilities.cpp ^
+runtime\capabilities\ping.cpp ^
+runtime\capabilities\version.cpp ^
+runtime\capabilities\close.cpp ^
+/Iexternal\webview2\include ^
 /link ^
 /LIBPATH:external\webview2\x64 ^
 WebView2LoaderStatic.lib ^

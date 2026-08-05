@@ -1,7 +1,10 @@
 #include <windows.h>
 #include <windowsx.h>      // GET_X_LPARAM, GET_Y_LPARAM
 #include <dcomp.h>
-
+#include "../../runtime/request.h"
+#include "../../runtime/response.h"
+#include "../../runtime/runtime.h"
+#include "../../runtime/dispatcher.h"
 #include <WebView2.h>
 #include <wrl.h>
 #include <fstream>
@@ -49,6 +52,7 @@ struct Manifest
 };
 
 Manifest gManifest;
+Runtime gRuntime;
 
 HWND gVisualWindow = nullptr;
 HINSTANCE gInstance = nullptr;
@@ -1478,83 +1482,33 @@ bool ParseInteractiveRegionSnapshot(
     return true;
 }
 
-std::wstring Dispatch(
-    int id,
-    const std::wstring& method,
-    const std::wstring& json
-)
-{
-    if (method == L"ping")
-    {
-        return
-            L"{\"id\":"
-            + std::to_wstring(id)
-            + L",\"ok\":true,\"result\":\"pong\"}";
-    }
-
-    if (method == L"version")
-    {
-        return
-            L"{\"id\":"
-            + std::to_wstring(id)
-            + L",\"ok\":true,\"result\":\"0.1\"}";
-    }
-
-    if (method == L"echo")
-    {
-        std::wstring text;
-
-        if (
-            ExtractJsonString(
-                json,
-                L"text",
-                text
-            )
-        )
-        {
-            return
-                L"{\"id\":"
-                + std::to_wstring(id)
-                + L",\"ok\":true,\"result\":\""
-                + text
-                + L"\"}";
-        }
-
-        return
-            L"{\"id\":"
-            + std::to_wstring(id)
-            + L",\"ok\":false,\"error\":\"Missing text\"}";
-    }
-
-    return
-        L"{\"id\":"
-        + std::to_wstring(id)
-        + L",\"ok\":false,\"error\":\"Unknown method\"}";
-}
 
 HRESULT InitializeWebView()
 {
     Log("Loading manifest...");
-if (!LoadManifest(gManifest))
-{
-    return E_FAIL;
-}
-std::wcout
-    << L"\n========== Hotoe ==========\n"
-    << L"Application : "
-    << gManifest.id
-    << L"\n"
 
-    << L"Debug       : "
-    << (gManifest.debug ? L"true" : L"false")
-    << L"\n"
+    if (!LoadManifest(gManifest))
+    {
+        return E_FAIL;
+    }
 
-    << L"Entry       : "
-    << gManifest.entry
-    << L"\n"
+    gRuntime.manifest = &gManifest;
 
-    << L"===========================\n";
+    std::wcout
+        << L"\n========== Hotoe ==========\n"
+        << L"Application : "
+        << gManifest.id
+        << L"\n"
 
+        << L"Debug       : "
+        << (gManifest.debug ? L"true" : L"false")
+        << L"\n"
+
+        << L"Entry       : "
+        << gManifest.entry
+        << L"\n"
+
+        << L"===========================\n";
     return
         CreateCoreWebView2EnvironmentWithOptions(
             nullptr,
@@ -1723,45 +1677,45 @@ hr = gWebView->add_WebMessageReceived(
                Parse request id
             ----------------------------- */
 
-            double idNumber = 0;
+            RuntimeRequest request{};
 
-            if (!ExtractJsonNumber(
-                    json,
-                    L"id",
-                    idNumber))
-                return S_OK;
+double idNumber = 0;
 
-            int id =
-                static_cast<int>(idNumber);
-
-            /* -----------------------------
-               Extract method
-            ----------------------------- */
-
-            std::wstring method;
-
-if (
-    !ExtractJsonString(
+if(
+    !ExtractJsonNumber(
         json,
-        L"method",
-        method
+        L"id",
+        idNumber
     )
 )
 {
     return S_OK;
 }
 
-            std::wstring reply =
+request.id =
+    static_cast<int>(idNumber);
 
-    Dispatch(
+if(
+    !ExtractJsonString(
+        json,
+        L"method",
+        request.capability
+    )
+)
+{
+    return S_OK;
+}
 
-        id,
+request.json = json;
 
-        method,
-
-        json
-
+RuntimeResponse response =
+    InvokeCapability(
+        gRuntime,
+        request
     );
+
+std::wstring reply =
+    SerializeResponse(response);
 
 sender->PostWebMessageAsJson(
 
