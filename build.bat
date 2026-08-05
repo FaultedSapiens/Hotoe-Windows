@@ -4,7 +4,7 @@ setlocal
 
 call "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
 
-set PROTOTYPE=09b
+set PROTOTYPE=09c
 
 if not exist build\%PROTOTYPE% (
     mkdir build\%PROTOTYPE%
@@ -17,12 +17,15 @@ cl ^
 /D_UNICODE ^
 prototypes\%PROTOTYPE%\main.cpp ^
 runtime\response.cpp ^
+runtime\request.cpp ^
 runtime\dispatcher.cpp ^
 runtime\capabilities\capabilities.cpp ^
 runtime\capabilities\ping.cpp ^
 runtime\capabilities\version.cpp ^
 runtime\capabilities\close.cpp ^
 runtime\capabilities\sirs.cpp ^
+runtime\capabilities\ipc.cpp ^
+runtime\ipc\bus.cpp ^
 /I external\webview2\include ^
 /link ^
 /LIBPATH:external\webview2\x64 ^

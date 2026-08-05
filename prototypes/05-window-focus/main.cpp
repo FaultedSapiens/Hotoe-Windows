@@ -68,7 +68,7 @@ std::deque<InspectorEvent> gEventLog;
 
 constexpr size_t MAX_LOG_ENTRIES = 100;
 
-void LogEvent(const std::string& text)
+void LogEvent(const std::string& text) 
 {
     std::cout << text << '\n';
 

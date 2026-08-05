@@ -6,6 +6,7 @@
 #include "version.h"
 #include "close.h"
 #include "sirs.h"
+#include "ipc.h"
 
 extern const Capability gCapabilities[];
 

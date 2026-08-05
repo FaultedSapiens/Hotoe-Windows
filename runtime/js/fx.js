@@ -116,6 +116,7 @@ function invoke(
 window.fx =
     window.fx || {};
 
+fx.transport = transport;
 fx.invoke = invoke;
 
 fx.ping = function ()
@@ -150,6 +151,44 @@ fx.recalculateInputRegions = function ()
     );
 };
 
+fx.pushString = function (
+    data
+)
+{
+    let text;
+
+    if (typeof data === "string")
+    {
+        text = data;
+    }
+    else
+    {
+        try
+        {
+            text =
+                JSON.stringify(data);
+        }
+        catch
+        {
+            text =
+                String(data);
+        }
+    }
+
+    if (text === undefined)
+    {
+        text =
+            String(data);
+    }
+
+    return invoke(
+        "fx.pushString",
+        {
+            data: text
+        }
+    );
+};
+
 window.invoke = invoke;
 
 window.CLOSE = function ()
@@ -160,4 +199,11 @@ window.CLOSE = function ()
 window.SIRs = function ()
 {
     return fx.recalculateInputRegions();
+};
+
+window.push = function (
+    data
+)
+{
+    return fx.pushString(data);
 };

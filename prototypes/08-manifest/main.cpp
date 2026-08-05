@@ -5,6 +5,8 @@
 #include "../../runtime/response.h"
 #include "../../runtime/runtime.h"
 #include "../../runtime/dispatcher.h"
+#include "../../runtime/ipc/backend.h"
+#include "../../runtime/ipc/message.h"
 #include <WebView2.h>
 #include <wrl.h>
 #include <fstream>
@@ -54,6 +56,7 @@ struct Manifest
 Manifest gManifest;
 Runtime gRuntime;
 RuntimeHost gRuntimeHost;
+RuntimeIpcBackend gRuntimeIpcBackend;
 
 HWND gVisualWindow = nullptr;
 HINSTANCE gInstance = nullptr;
@@ -331,6 +334,16 @@ bool HostRecalculateInputRegions(
 bool HostDispatchFocusEvent(
     Runtime& runtime,
     bool focused
+);
+
+bool HostDispatchBusMessage(
+    Runtime& runtime,
+    const wchar_t* data
+);
+
+bool HostIpcPushString(
+    Runtime& runtime,
+    const RuntimeIpcMessage& message
 );
 
 
@@ -1632,6 +1645,94 @@ bool HostDispatchFocusEvent(
     return SUCCEEDED(hr);
 }
 
+std::wstring ToJavaScriptStringLiteral(
+    const std::wstring& value
+)
+{
+    std::wstring literal =
+        L"\"";
+
+    for (wchar_t ch : value)
+    {
+        switch (ch)
+        {
+            case L'\\':
+                literal += L"\\\\";
+                break;
+
+            case L'"':
+                literal += L"\\\"";
+                break;
+
+            case L'\n':
+                literal += L"\\n";
+                break;
+
+            case L'\r':
+                literal += L"\\r";
+                break;
+
+            case L'\t':
+                literal += L"\\t";
+                break;
+
+            default:
+                literal.push_back(ch);
+                break;
+        }
+    }
+
+    literal += L"\"";
+
+    return literal;
+}
+
+bool HostDispatchBusMessage(
+    Runtime&,
+    const wchar_t* data
+)
+{
+    if (!gWebView)
+        return false;
+
+    const std::wstring detail =
+        data
+            ? std::wstring(data)
+            : L"";
+
+    const std::wstring script =
+        L"window.dispatchEvent(new CustomEvent(\"busMessage\", { detail: " +
+        ToJavaScriptStringLiteral(detail) +
+        L" }));";
+
+    HRESULT hr =
+        gWebView->ExecuteScript(
+            script.c_str(),
+            nullptr
+        );
+
+    return SUCCEEDED(hr);
+}
+
+bool HostIpcPushString(
+    Runtime& runtime,
+    const RuntimeIpcMessage& message
+)
+{
+    if (
+        !runtime.host ||
+        !runtime.host->dispatchBusMessage
+    )
+    {
+        return false;
+    }
+
+    return runtime.host->dispatchBusMessage(
+        runtime,
+        message.data.c_str()
+    );
+}
+
 bool DispatchRuntimeFocusEvent(
     bool focused
 )
@@ -2135,6 +2236,15 @@ Log(
 
     gRuntimeHost.dispatchFocusEvent =
         HostDispatchFocusEvent;
+
+    gRuntimeHost.dispatchBusMessage =
+        HostDispatchBusMessage;
+
+    gRuntimeIpcBackend.pushString =
+        HostIpcPushString;
+
+    gRuntimeHost.ipcBackend =
+        &gRuntimeIpcBackend;
 
 
 

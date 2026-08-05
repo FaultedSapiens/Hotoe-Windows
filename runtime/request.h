@@ -9,4 +9,9 @@ struct RuntimeRequest
     std::wstring capability;
 
     std::wstring json;
+
+    bool GetString(
+        const std::wstring& key,
+        std::wstring& value
+    ) const;
 };

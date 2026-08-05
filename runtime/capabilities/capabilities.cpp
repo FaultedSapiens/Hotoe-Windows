@@ -7,7 +7,8 @@ const Capability gCapabilities[] =
     { L"fx.close",                     Close                    },
 
     { L"fx.closeApplication",          Close                    },
-    { L"fx.recalculateInputRegions",   RecalculateInputRegions  }
+    { L"fx.recalculateInputRegions",   RecalculateInputRegions  },
+    { L"fx.pushString",                PushString               }
 };
 
 const size_t gCapabilityCount =
