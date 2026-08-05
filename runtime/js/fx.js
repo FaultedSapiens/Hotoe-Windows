@@ -10,6 +10,21 @@ let nextRequestId = 1;
 const pendingRequests =
     new Map();
 
+function emitRuntimeEvent(
+    name,
+    detail
+)
+{
+    window.dispatchEvent(
+        new CustomEvent(
+            "fluentx:" + name,
+            {
+                detail
+            }
+        )
+    );
+}
+
 function normalizeInputRegionSugar()
 {
     document
@@ -49,8 +64,23 @@ function receive(
     if (!pending)
         return;
 
-    pendingRequests.delete(
-        message.id
+    pendingRequests.delete(message.id);
+
+    const duration =
+        performance.now() - pending.startedAt;
+
+    emitRuntimeEvent(
+        "response",
+        {
+            id: message.id,
+            method: pending.method,
+            params: pending.params,
+            ok: message.ok !== false,
+            result: message.result,
+            error: message.error,
+            duration,
+            response: message
+        }
     );
 
     if (message.ok === false)
@@ -97,16 +127,33 @@ function invoke(
             params
         };
 
+    const startedAt =
+        performance.now();
+
     const promise =
         new Promise((resolve, reject) => {
             pendingRequests.set(
                 id,
                 {
                     resolve,
-                    reject
+                    reject,
+                    method,
+                    params,
+                    startedAt
                 }
             );
         });
+
+    emitRuntimeEvent(
+        "request",
+        {
+            id,
+            method,
+            params,
+            request,
+            startedAt
+        }
+    );
 
     transport.postMessage(request);
 

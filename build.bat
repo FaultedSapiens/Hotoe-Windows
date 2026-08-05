@@ -4,7 +4,7 @@ setlocal
 
 call "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
 
-set PROTOTYPE=09c
+set PROTOTYPE=09d
 
 if not exist build\%PROTOTYPE% (
     mkdir build\%PROTOTYPE%
